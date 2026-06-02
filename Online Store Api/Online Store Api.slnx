@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="../Sore.Core/Store.Core.csproj" />
+  <Project Path="../Store.Repository/Store.Repository.csproj" />
+  <Project Path="../Store.Service/Store.Service.csproj" Id="e133f11f-0b3e-413a-b84a-1730a0eb1296" />
+  <Project Path="Online Store Api.csproj" />
+</Solution>
