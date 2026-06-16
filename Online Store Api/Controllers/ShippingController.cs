@@ -1,10 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Store.API.Helpers;
+using Store.Core.DTOs.Payment;
 using Store.Core.DTOs.Shipping;
 using Store.Core.Interfaces.Services;
 
 namespace Store.API.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ShippingController : ControllerBase
@@ -16,10 +20,19 @@ namespace Store.API.Controllers
             _shippingService = shippingService;
         }
 
+        private bool IsAdminOrSameCustomer(int customerId)
+        {
+            var loggedInId = int.Parse(User.FindFirst("sub")?.Value ?? "0");
+            var loggedInRole = User.FindFirst("role")?.Value;
+            return loggedInRole == "Admin" || loggedInId == customerId;
+        }
+
         // ==================================================
         // GET api/shipping
         // ==================================================
         [HttpGet]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<IEnumerable<ShippingDto>>>> GetAll()
         {
@@ -31,10 +44,14 @@ namespace Store.API.Controllers
         // GET api/shipping/1
         // ==================================================
         [HttpGet("{id}")]
+        [Authorize(Policy = "AllUsers")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ShippingDto>>> GetById(int id)
         {
+            if (!IsAdminOrSameCustomer(id))
+                return Unauthorized(ApiResponse<ShippingDto>.Fail("You can only view your own data"));
             var shipping = await _shippingService.GetByIdAsync(id);
             if (shipping == null)
                 return NotFound(ApiResponse<ShippingDto>.Fail($"Shipping with ID {id} was not found"));
@@ -47,10 +64,14 @@ namespace Store.API.Controllers
         // Get shipping by order ID
         // ==================================================
         [HttpGet("order/{orderId}")]
+        [Authorize(Policy ="AllUsers")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ShippingDto>>> GetByOrder(int orderId)
         {
+            if (!IsAdminOrSameCustomer(orderId))
+                return Unauthorized(ApiResponse<ShippingDto>.Fail("You can only view your own data"));
             var shipping = await _shippingService.GetByOrderAsync(orderId);
             if (shipping == null)
                 return NotFound(ApiResponse<ShippingDto>.Fail($"No shipping found for order {orderId}"));
@@ -63,6 +84,8 @@ namespace Store.API.Controllers
         // Get shipping by tracking number
         // ==================================================
         [HttpGet("track/{trackingNumber}")]
+        [Authorize(Policy ="AllUsers")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ShippingDto>>> GetByTrackingNumber(string trackingNumber)
@@ -79,6 +102,8 @@ namespace Store.API.Controllers
         // Get shippings by status
         // ==================================================
         [HttpGet("status/{status}")]
+        [Authorize(Policy ="AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<IEnumerable<ShippingDto>>>> GetByStatus(short status)
         {
@@ -91,6 +116,8 @@ namespace Store.API.Controllers
         // Create a shipping record for an order
         // ==================================================
         [HttpPost]
+        [AllowAnonymous]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ApiResponse<ShippingDto>>> Create(ShippingCreateDto createDto)
@@ -110,6 +137,8 @@ namespace Store.API.Controllers
         // Update shipping info
         // ==================================================
         [HttpPut("{id}")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ShippingDto>>> Update(int id, ShippingUpdateDto updateDto)
@@ -126,6 +155,8 @@ namespace Store.API.Controllers
         // Update shipping status and delivery date
         // ==================================================
         [HttpPut("{id}/status")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<bool>>> UpdateStatus(
@@ -144,6 +175,8 @@ namespace Store.API.Controllers
         // DELETE api/shipping/1
         // ==================================================
         [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)

@@ -15,6 +15,8 @@ namespace Store.Repository.Data.Configuration
             entity.HasIndex(e => e.Price, "IX_ProductCatalog_Price");
 
 
+            entity.ToTable("ProductCatalog");
+
             entity.HasKey(e => e.ProductID);
 
             // ==================================================

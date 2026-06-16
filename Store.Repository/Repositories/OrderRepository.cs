@@ -16,7 +16,7 @@ namespace Store.Repository.Repositories
             return await _context.Orders
                                  .Include(o => o.Customer)
                                  .Include(o => o.OrderItem)
-                                    .ThenInclude(oi => oi.ProductCatalog)
+                                 .ThenInclude(oi => oi.ProductCatalog)
                                  .Include(o => o.Payment)
                                  .Include(o => o.Shipping)
                                  .ToListAsync();
@@ -27,8 +27,8 @@ namespace Store.Repository.Repositories
             return await _context.Orders
                                  .Include(o => o.Customer)
                                  .Include(o => o.OrderItem)
-                                    .ThenInclude(oi => oi.ProductCatalog)
-                                        .ThenInclude(p => p.ProductImages)
+                                 .ThenInclude(oi => oi.ProductCatalog)
+                                 .ThenInclude(p => p.ProductImages)
                                  .Include(o => o.Payment)
                                  .Include(o => o.Shipping)
                                  .FirstOrDefaultAsync(o => o.OrderID == orderId);
@@ -47,7 +47,7 @@ namespace Store.Repository.Repositories
         {
             return await _context.Orders
                                  .Include(o => o.Customer)
-                                 .Where(o => o.Status == status.ToString())
+                                 .Where(o => o.Status == status)
                                  .ToListAsync();
         }
 
@@ -65,7 +65,7 @@ namespace Store.Repository.Repositories
             var order = await _context.Orders.FindAsync(orderId);
             if (order != null)
             {
-                order.Status = status.ToString();
+                order.Status = status;
                 _context.Orders.Update(order);
             }
         }

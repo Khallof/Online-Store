@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Store.API.Helpers;
 using Store.Core.DTOs.Product;
+using Store.Core.Helpers;
 using Store.Core.Interfaces.Services;
 
 namespace Store.API.Controllers
@@ -17,22 +20,43 @@ namespace Store.API.Controllers
         }
 
         // ==================================================
-        // GET api/product
-        // Get all products (summary — lightweight)
+        // GET api/product?pageNumber=1&pageSize=10
+        // Get all products with pagination
         // ==================================================
         [HttpGet]
+        [AllowAnonymous]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<ApiResponse<IEnumerable<ProductSummaryDto>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<PaginatedResult<ProductSummaryDto>>>> GetAll(
+            [FromQuery] PaginationParams pagination)
         {
             var products = await _productService.GetAllAsync();
-            return Ok(ApiResponse<IEnumerable<ProductSummaryDto>>.Ok(products, "Products retrieved successfully"));
+
+            // Apply pagination
+            var totalCount = products.Count();
+            var pagedProducts = products
+                .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                .Take(pagination.PageSize);
+
+            var result = new PaginatedResult<ProductSummaryDto>(
+                pagedProducts,
+                totalCount,
+                pagination.PageNumber,
+                pagination.PageSize
+            );
+
+            return Ok(ApiResponse<PaginatedResult<ProductSummaryDto>>.Ok(
+                result,
+                $"Page {pagination.PageNumber} of {result.TotalPages}"
+            ));
         }
 
         // ==================================================
         // GET api/product/1
-        // Get product summary by ID
         // ==================================================
         [HttpGet("{id}")]
+        [AllowAnonymous]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ProductSummaryDto>>> GetById(int id)
@@ -46,9 +70,10 @@ namespace Store.API.Controllers
 
         // ==================================================
         // GET api/product/1/details
-        // Get full product detail with all images
         // ==================================================
         [HttpGet("{id}/details")]
+        [AllowAnonymous]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ProductDetailDto>>> GetDetail(int id)
@@ -61,48 +86,80 @@ namespace Store.API.Controllers
         }
 
         // ==================================================
-        // GET api/product/category/1
-        // Get all products in a category
+        // GET api/product/category/1?pageNumber=1&pageSize=10
         // ==================================================
         [HttpGet("category/{categoryId}")]
+        [AllowAnonymous]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<ApiResponse<IEnumerable<ProductSummaryDto>>>> GetByCategory(int categoryId)
+        public async Task<ActionResult<ApiResponse<PaginatedResult<ProductSummaryDto>>>> GetByCategory(
+            int categoryId,
+            [FromQuery] PaginationParams pagination)
         {
             var products = await _productService.GetByCategoryAsync(categoryId);
-            return Ok(ApiResponse<IEnumerable<ProductSummaryDto>>.Ok(products, "Products retrieved successfully"));
+            var totalCount = products.Count();
+            var paged = products
+                .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                .Take(pagination.PageSize);
+
+            var result = new PaginatedResult<ProductSummaryDto>(
+                paged, totalCount, pagination.PageNumber, pagination.PageSize
+            );
+
+            return Ok(ApiResponse<PaginatedResult<ProductSummaryDto>>.Ok(
+                result, "Products retrieved successfully"
+            ));
         }
 
         // ==================================================
-        // GET api/product/search?name=headphones
-        // Search products by name
+        // GET api/product/search?name=headphones&pageNumber=1&pageSize=10
         // ==================================================
         [HttpGet("search")]
+        [AllowAnonymous]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<ApiResponse<IEnumerable<ProductSummaryDto>>>> Search([FromQuery] string name)
+        public async Task<ActionResult<ApiResponse<PaginatedResult<ProductSummaryDto>>>> Search(
+            [FromQuery] string name,
+            [FromQuery] PaginationParams pagination)
         {
             var products = await _productService.SearchByNameAsync(name);
-            return Ok(ApiResponse<IEnumerable<ProductSummaryDto>>.Ok(products, "Search results retrieved successfully"));
+            var totalCount = products.Count();
+            var paged = products
+                .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                .Take(pagination.PageSize);
+
+            var result = new PaginatedResult<ProductSummaryDto>(
+                paged, totalCount, pagination.PageNumber, pagination.PageSize
+            );
+
+            return Ok(ApiResponse<PaginatedResult<ProductSummaryDto>>.Ok(
+                result, "Search results retrieved successfully"
+            ));
         }
 
         // ==================================================
         // GET api/product/price?min=10&max=100
-        // Get products in a price range
         // ==================================================
         [HttpGet("price")]
+        [AllowAnonymous]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<IEnumerable<ProductSummaryDto>>>> GetByPriceRange(
             [FromQuery] decimal min,
             [FromQuery] decimal max)
         {
             var products = await _productService.GetByPriceRangeAsync(min, max);
-            return Ok(ApiResponse<IEnumerable<ProductSummaryDto>>.Ok(products, "Products retrieved successfully"));
+            return Ok(ApiResponse<IEnumerable<ProductSummaryDto>>.Ok(
+                products, "Products retrieved successfully"
+            ));
         }
 
         // ==================================================
         // POST api/product
-        // Create a new product
         // ==================================================
         [HttpPost]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ApiResponse<ProductSummaryDto>>> Create(ProductCreateDto createDto)
@@ -115,12 +172,15 @@ namespace Store.API.Controllers
 
         // ==================================================
         // POST api/product/1/images
-        // Add an image to a product
         // ==================================================
         [HttpPost("{id}/images")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ApiResponse<ProductImageDto>>> AddImage(int id, ProductImageCreateDto imageDto)
+        public async Task<ActionResult<ApiResponse<ProductImageDto>>> AddImage(
+            int id,
+            ProductImageCreateDto imageDto)
         {
             var product = await _productService.GetByIdAsync(id);
             if (product == null)
@@ -134,12 +194,15 @@ namespace Store.API.Controllers
 
         // ==================================================
         // PUT api/product/1
-        // Update a product
         // ==================================================
         [HttpPut("{id}")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ApiResponse<ProductSummaryDto>>> Update(int id, ProductUpdateDto updateDto)
+        public async Task<ActionResult<ApiResponse<ProductSummaryDto>>> Update(
+            int id,
+            ProductUpdateDto updateDto)
         {
             var product = await _productService.UpdateAsync(id, updateDto);
             if (product == null)
@@ -150,9 +213,10 @@ namespace Store.API.Controllers
 
         // ==================================================
         // DELETE api/product/1
-        // Delete a product
         // ==================================================
         [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)
@@ -166,9 +230,10 @@ namespace Store.API.Controllers
 
         // ==================================================
         // DELETE api/product/images/1
-        // Remove an image from a product
         // ==================================================
         [HttpDelete("images/{imageId}")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<bool>>> RemoveImage(int imageId)

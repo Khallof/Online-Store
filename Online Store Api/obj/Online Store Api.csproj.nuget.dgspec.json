@@ -62,6 +62,10 @@
           "framework": "net8.0",
           "targetAlias": "net8.0",
           "dependencies": {
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[8.0.11, )"
+            },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
               "version": "[8.0.0, )"
@@ -84,9 +88,21 @@
               "target": "Package",
               "version": "[8.0.0, )"
             },
+            "Microsoft.IdentityModel.Tokens": {
+              "target": "Package",
+              "version": "[7.7.1, )"
+            },
+            "Microsoft.OpenApi": {
+              "target": "Package",
+              "version": "[1.6.22, )"
+            },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[6.6.2, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[7.7.1, )"
             }
           },
           "imports": [
@@ -333,9 +349,6 @@
             "projectReferences": {
               "C:\\Users\\Khall\\Documents\\My_GitHub\\ONLINE_STORE\\Sore.Core\\Store.Core.csproj": {
                 "projectPath": "C:\\Users\\Khall\\Documents\\My_GitHub\\ONLINE_STORE\\Sore.Core\\Store.Core.csproj"
-              },
-              "C:\\Users\\Khall\\Documents\\My_GitHub\\ONLINE_STORE\\Store.Repository\\Store.Repository.csproj": {
-                "projectPath": "C:\\Users\\Khall\\Documents\\My_GitHub\\ONLINE_STORE\\Store.Repository\\Store.Repository.csproj"
               }
             }
           }
@@ -357,27 +370,21 @@
           "framework": "net8.0",
           "targetAlias": "net8.0",
           "dependencies": {
-            "Microsoft.EntityFrameworkCore": {
+            "BCrypt.Net-Next": {
+              "target": "Package",
+              "version": "[4.2.0, )"
+            },
+            "Microsoft.Extensions.Configuration.Abstractions": {
               "target": "Package",
               "version": "[8.0.0, )"
             },
-            "Microsoft.EntityFrameworkCore.SqlServer": {
+            "Microsoft.IdentityModel.Tokens": {
               "target": "Package",
-              "version": "[8.0.0, )"
+              "version": "[7.7.1, )"
             },
-            "Microsoft.EntityFrameworkCore.Tools": {
-              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
-              "suppressParent": "All",
+            "System.IdentityModel.Tokens.Jwt": {
               "target": "Package",
-              "version": "[8.0.0, )"
-            },
-            "Microsoft.Extensions.Configuration": {
-              "target": "Package",
-              "version": "[8.0.0, )"
-            },
-            "Microsoft.Extensions.Configuration.Binder": {
-              "target": "Package",
-              "version": "[8.0.0, )"
+              "version": "[7.7.1, )"
             }
           },
           "imports": [

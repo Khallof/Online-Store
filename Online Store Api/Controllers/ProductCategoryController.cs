@@ -1,10 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Store.API.Helpers;
+using Store.Core.DTOs.Payment;
 using Store.Core.DTOs.ProductCategory;
 using Store.Core.Interfaces.Services;
 
 namespace Store.API.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ProductCategoryController : ControllerBase
@@ -16,10 +20,19 @@ namespace Store.API.Controllers
             _categoryService = categoryService;
         }
 
+        private bool IsAdminOrSameCustomer(int customerId)
+        {
+            var loggedInId = int.Parse(User.FindFirst("sub")?.Value ?? "0");
+            var loggedInRole = User.FindFirst("role")?.Value;
+            return loggedInRole == "Admin" || loggedInId == customerId;
+        }
+
         // ==================================================
         // GET api/productcategory
         // ==================================================
         [HttpGet]
+        [Authorize(Policy = "AdminOnly")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<IEnumerable<ProductCategoryDto>>>> GetAll()
         {
@@ -31,10 +44,16 @@ namespace Store.API.Controllers
         // GET api/productcategory/1
         // ==================================================
         [HttpGet("{id}")]
+        [Authorize(Policy = "AllUsers")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ProductCategoryDto>>> GetById(int id)
         {
+
+            if (!IsAdminOrSameCustomer(id))
+                return Unauthorized(ApiResponse<ProductCategoryDto>.Fail("You can only view your own data"));
+
             var category = await _categoryService.GetByIdAsync(id);
             if (category == null)
                 return NotFound(ApiResponse<ProductCategoryDto>.Fail($"Category with ID {id} was not found"));
@@ -47,10 +66,14 @@ namespace Store.API.Controllers
         // Get category with all its products
         // ==================================================
         [HttpGet("{id}/products")]
+        [Authorize(Policy = "AllUsers")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ProductCategoryDto>>> GetWithProducts(int id)
         {
+            if (!IsAdminOrSameCustomer(id))
+                return Unauthorized(ApiResponse<ProductCategoryDto>.Fail("You can only view your own data"));
             var category = await _categoryService.GetWithProductsAsync(id);
             if (category == null)
                 return NotFound(ApiResponse<ProductCategoryDto>.Fail($"Category with ID {id} was not found"));
@@ -62,6 +85,8 @@ namespace Store.API.Controllers
         // POST api/productcategory
         // ==================================================
         [HttpPost]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ApiResponse<ProductCategoryDto>>> Create(ProductCategoryCreateDto createDto)
@@ -79,6 +104,8 @@ namespace Store.API.Controllers
         // PUT api/productcategory/1
         // ==================================================
         [HttpPut("{id}")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ProductCategoryDto>>> Update(int id, ProductCategoryUpdateDto updateDto)
@@ -94,6 +121,8 @@ namespace Store.API.Controllers
         // DELETE api/productcategory/1
         // ==================================================
         [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)

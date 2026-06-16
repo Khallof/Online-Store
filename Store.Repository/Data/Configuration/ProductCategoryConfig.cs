@@ -12,6 +12,8 @@ namespace Store.Repository.Data.Configuration
             entity.HasIndex(e => e.CategoryName, "UQ_ProductCategory_CategoryName")
                   .IsUnique();
 
+            entity.ToTable("ProductCategory");
+
             entity.HasKey(e => e.CategoryID);
 
 

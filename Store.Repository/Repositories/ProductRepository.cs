@@ -13,7 +13,7 @@ namespace Store.Repository.Repositories
 
         public async Task<IEnumerable<ProductCatalog>> GetAllWithDetailsAsync()
         {
-            return await _context.ProductCatalogs
+            return await _context.ProductCatalog
                                  .Include(p => p.ProductCategory)
                                  .Include(p => p.ProductImages)
                                  .ToListAsync();
@@ -21,7 +21,7 @@ namespace Store.Repository.Repositories
 
         public async Task<ProductCatalog?> GetWithDetailsAsync(int productId)
         {
-            return await _context.ProductCatalogs
+            return await _context.ProductCatalog
                                  .Include(p => p.ProductCategory)
                                  .Include(p => p.ProductImages.OrderBy(i => i.ImageOrder))
                                  .FirstOrDefaultAsync(p => p.ProductID == productId);
@@ -29,7 +29,7 @@ namespace Store.Repository.Repositories
 
         public async Task<IEnumerable<ProductCatalog>> GetByCategoryAsync(int categoryId)
         {
-            return await _context.ProductCatalogs
+            return await _context.ProductCatalog
                                  .Include(p => p.ProductCategory)
                                  .Include(p => p.ProductImages)
                                  .Where(p => p.CategoryID == categoryId)
@@ -38,7 +38,7 @@ namespace Store.Repository.Repositories
 
         public async Task<IEnumerable<ProductCatalog>> SearchByNameAsync(string name)
         {
-            return await _context.ProductCatalogs
+            return await _context.ProductCatalog
                                  .Include(p => p.ProductCategory)
                                  .Include(p => p.ProductImages)
                                  .Where(p => p.ProductName.Contains(name))
@@ -47,7 +47,7 @@ namespace Store.Repository.Repositories
 
         public async Task<IEnumerable<ProductCatalog>> GetByPriceRangeAsync(decimal minPrice, decimal maxPrice)
         {
-            return await _context.ProductCatalogs
+            return await _context.ProductCatalog
                                  .Include(p => p.ProductCategory)
                                  .Include(p => p.ProductImages)
                                  .Where(p => p.Price >= minPrice && p.Price <= maxPrice)
@@ -56,18 +56,18 @@ namespace Store.Repository.Repositories
 
         public async Task<bool> ProductExistsAsync(string productName)
         {
-            return await _context.ProductCatalogs
+            return await _context.ProductCatalog
                                  .AnyAsync(p => p.ProductName == productName);
         }
 
         public async Task UpdateStockAsync(int productId, int quantity)
         {
-            var product = await _context.ProductCatalogs
+            var product = await _context.ProductCatalog
                                         .FindAsync(productId);
             if (product != null)
             {
                 product.QuantityInStock -= quantity;
-                _context.ProductCatalogs.Update(product);
+                _context.ProductCatalog.Update(product);
             }
         }
 

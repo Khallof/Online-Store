@@ -124,7 +124,7 @@ namespace Store.Service.Services
                 CustomerID = createDto.CustomerID,
                 Orderdate = DateTime.Now,
                 TotalAmount = totalAmount,
-                Status = "0",  // Pending
+                Status = 0,  // Pending
                 OrderItem = orderItems
             };
 
@@ -138,7 +138,7 @@ namespace Store.Service.Services
             var order = await _unitOfWork.Orders.GetByIdAsync(id);
             if (order == null) return null;
 
-            order.Status = updateDto.Status.ToString();
+            order.Status = updateDto.Status;
 
             _unitOfWork.Orders.Update(order);
             await _unitOfWork.SaveChangesAsync();

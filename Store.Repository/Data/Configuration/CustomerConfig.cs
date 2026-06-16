@@ -28,7 +28,10 @@ namespace Store.Repository.Data.Configuration
             entity.Property(e => e.Address)
            .HasMaxLength(200);
 
-          
+            entity.Property(e => e.Role)
+                 .HasMaxLength(20)
+                 .IsRequired()
+                 .HasDefaultValue("Customer");
 
         }
 

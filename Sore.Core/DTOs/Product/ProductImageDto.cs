@@ -10,6 +10,6 @@ namespace Store.Core.DTOs.Product
     {
         public int ImageID { get; set; }
         public string ImageURL { get; set; } = string.Empty;
-        public int ImageOrder { get; set; }
+        public short ImageOrder { get; set; }
     }
 }

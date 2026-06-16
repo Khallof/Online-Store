@@ -28,7 +28,7 @@ namespace Store.Repository.Data.Configuration
 
 
             entity.Property(e => e.ImageOrder)
-                  .HasDefaultValue(0)
+                  .HasDefaultValue((short) 0)
                   .IsRequired();
 
             // ==================================================

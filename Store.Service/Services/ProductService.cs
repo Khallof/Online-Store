@@ -43,14 +43,15 @@ namespace Store.Service.Services
                 QuantityInStock = product.QuantityInStock,
                 CategoryID = product.CategoryID,
                 CategoryName = product.ProductCategory?.CategoryName ?? string.Empty,
+                // In MapToDetailDto
                 Images = product.ProductImages
-                                         .OrderBy(i => i.ImageOrder)
-                                         .Select(i => new ProductImageDto
-                                         {
-                                             ImageID = i.ImageID,
-                                             ImageURL = i.ImageURL,
-                                             ImageOrder = i.ImageOrder
-                                         }).ToList()
+                .OrderBy(i => i.ImageOrder)
+                .Select(i => new ProductImageDto
+                {
+                    ImageID = i.ImageID,
+                    ImageURL = i.ImageURL,
+                    ImageOrder = i.ImageOrder  // ✅ no cast needed now — both short
+                }).ToList()
             };
         }
 

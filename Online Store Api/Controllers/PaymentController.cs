@@ -1,10 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Store.API.Helpers;
+using Store.Core.DTOs.Order;
 using Store.Core.DTOs.Payment;
 using Store.Core.Interfaces.Services;
 
 namespace Store.API.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class PaymentController : ControllerBase
@@ -16,10 +20,21 @@ namespace Store.API.Controllers
             _paymentService = paymentService;
         }
 
+
+        private bool IsAdminOrSameCustomer(int customerId)
+        {
+            var loggedInId = int.Parse(User.FindFirst("sub")?.Value ?? "0");
+            var loggedInRole = User.FindFirst("role")?.Value;
+            return loggedInRole == "Admin" || loggedInId == customerId;
+        }
+
+
         // ==================================================
         // GET api/payment
         // ==================================================
         [HttpGet]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<IEnumerable<PaymentDto>>>> GetAll()
         {
@@ -31,10 +46,14 @@ namespace Store.API.Controllers
         // GET api/payment/1
         // ==================================================
         [HttpGet("{id}")]
+        [Authorize(Policy = "AllUsers")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<PaymentDto>>> GetById(int id)
         {
+            if (!IsAdminOrSameCustomer(id))
+                return Unauthorized(ApiResponse<PaymentDto>.Fail("You can only view your own data"));
             var payment = await _paymentService.GetByIdAsync(id);
             if (payment == null)
                 return NotFound(ApiResponse<PaymentDto>.Fail($"Payment with ID {id} was not found"));
@@ -47,10 +66,14 @@ namespace Store.API.Controllers
         // Get payment by order ID
         // ==================================================
         [HttpGet("order/{orderId}")]
+        [Authorize(Policy = "AllUsers")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<PaymentDto>>> GetByOrder(int orderId)
         {
+            if (!IsAdminOrSameCustomer(orderId))
+                return Unauthorized(ApiResponse<PaymentDto>.Fail("You can only view your own data"));
             var payment = await _paymentService.GetByOrderAsync(orderId);
             if (payment == null)
                 return NotFound(ApiResponse<PaymentDto>.Fail($"No payment found for order {orderId}"));
@@ -63,6 +86,8 @@ namespace Store.API.Controllers
         // Get payments by method
         // ==================================================
         [HttpGet("method/{method}")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<IEnumerable<PaymentDto>>>> GetByMethod(string method)
         {
@@ -74,6 +99,8 @@ namespace Store.API.Controllers
         // GET api/payment/daterange?start=2024-01-01&end=2024-12-31
         // ==================================================
         [HttpGet("daterange")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<IEnumerable<PaymentDto>>>> GetByDateRange(
             [FromQuery] DateTime start,
@@ -88,6 +115,8 @@ namespace Store.API.Controllers
         // Create a payment for an order
         // ==================================================
         [HttpPost]
+        [AllowAnonymous]
+        [EnableRateLimiting("WritePolicy")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ApiResponse<PaymentDto>>> Create(PaymentCreateDto createDto)
@@ -106,6 +135,8 @@ namespace Store.API.Controllers
         // DELETE api/payment/1
         // ==================================================
         [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)

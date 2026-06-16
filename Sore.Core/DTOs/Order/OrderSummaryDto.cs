@@ -11,7 +11,7 @@ namespace Store.Core.DTOs.Order
         public int OrderID { get; set; }
         public DateTime OrderDate { get; set; }
         public decimal TotalAmount { get; set; }
-        public string Status { get; set; } = string.Empty;        // readable label e.g. "Delivered"
+        public short Status { get; set; } = 0;        // readable label e.g. "Delivered"
         public int ItemCount { get; set; }
     }
 }

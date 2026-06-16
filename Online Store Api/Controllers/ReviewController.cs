@@ -1,10 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Store.API.Helpers;
+using Store.Core.DTOs.Payment;
 using Store.Core.DTOs.Review;
 using Store.Core.Interfaces.Services;
 
 namespace Store.API.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ReviewController : ControllerBase
@@ -16,10 +20,19 @@ namespace Store.API.Controllers
             _reviewService = reviewService;
         }
 
+        private bool IsAdminOrSameCustomer(int customerId)
+        {
+            var loggedInId = int.Parse(User.FindFirst("sub")?.Value ?? "0");
+            var loggedInRole = User.FindFirst("role")?.Value;
+            return loggedInRole == "Admin" || loggedInId == customerId;
+        }
+
         // ==================================================
         // GET api/review
         // ==================================================
         [HttpGet]
+        [Authorize(Policy ="AllUsers")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<IEnumerable<ReviewDto>>>> GetAll()
         {
@@ -31,10 +44,14 @@ namespace Store.API.Controllers
         // GET api/review/1
         // ==================================================
         [HttpGet("{id}")]
+        [Authorize(Policy = "AllUsers")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ReviewDto>>> GetById(int id)
         {
+            if (!IsAdminOrSameCustomer(id))
+                return Unauthorized(ApiResponse<ReviewDto>.Fail("You can only view your own data"));
             var review = await _reviewService.GetByIdAsync(id);
             if (review == null)
                 return NotFound(ApiResponse<ReviewDto>.Fail($"Review with ID {id} was not found"));
@@ -47,9 +64,13 @@ namespace Store.API.Controllers
         // Get all reviews for a product
         // ==================================================
         [HttpGet("product/{productId}")]
+        [Authorize(Policy ="AllUsers")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<IEnumerable<ReviewDto>>>> GetByProduct(int productId)
         {
+            if (!IsAdminOrSameCustomer(productId))
+                return Unauthorized(ApiResponse<ReviewDto>.Fail("You can only view your own data"));
             var reviews = await _reviewService.GetByProductAsync(productId);
             return Ok(ApiResponse<IEnumerable<ReviewDto>>.Ok(reviews, "Product reviews retrieved successfully"));
         }
@@ -59,9 +80,13 @@ namespace Store.API.Controllers
         // Get all reviews by a customer
         // ==================================================
         [HttpGet("customer/{customerId}")]
+        [Authorize(Policy ="AllUsers")]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<IEnumerable<ReviewDto>>>> GetByCustomer(int customerId)
         {
+            if (!IsAdminOrSameCustomer(customerId))
+                return Unauthorized(ApiResponse<ReviewDto>.Fail("You can only view your own data"));
             var reviews = await _reviewService.GetByCustomerAsync(customerId);
             return Ok(ApiResponse<IEnumerable<ReviewDto>>.Ok(reviews, "Customer reviews retrieved successfully"));
         }
@@ -71,6 +96,8 @@ namespace Store.API.Controllers
         // Get average rating for a product
         // ==================================================
         [HttpGet("product/{productId}/rating")]
+        [AllowAnonymous]
+        [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<decimal>>> GetAverageRating(int productId)
         {
@@ -83,6 +110,8 @@ namespace Store.API.Controllers
         // Submit a review
         // ==================================================
         [HttpPost]
+        [AllowAnonymous]
+        [EnableRateLimiting("WritePolicy")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ApiResponse<ReviewDto>>> Create(ReviewCreateDto createDto)
@@ -106,6 +135,8 @@ namespace Store.API.Controllers
         // Update a review
         // ==================================================
         [HttpPut("{id}")]
+        [Authorize(Policy ="AllUsers")]
+        [EnableRateLimiting("WritePolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -126,6 +157,8 @@ namespace Store.API.Controllers
         // DELETE api/review/1
         // ==================================================
         [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)

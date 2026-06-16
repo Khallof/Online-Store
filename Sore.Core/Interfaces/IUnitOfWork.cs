@@ -18,6 +18,7 @@ namespace Store.Core.Interfaces
         IShippingRepository Shippings { get; }
         IReviewRepository Reviews { get; }
 
+        IRefreshTokenRepository RefreshTokens { get; }
         // Save all changes to the database in one transaction
         Task<int> SaveChangesAsync();
     }

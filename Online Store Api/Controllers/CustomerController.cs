@@ -1,10 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Store.API.Helpers;
 using Store.Core.DTOs.Customer;
 using Store.Core.Interfaces.Services;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Claims;
 
 namespace Store.API.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class CustomerController : ControllerBase
@@ -17,10 +21,24 @@ namespace Store.API.Controllers
         }
 
         // ==================================================
+        // Helper — checks if logged in user is Admin
+        //          OR is the same customer as requested
+        // ==================================================
+        private bool IsAdminOrSameCustomer(int customerId)
+        {
+            var loggedInId = int.Parse(User.FindFirst("sub")?.Value ?? "0");
+            var loggedInRole = User.FindFirst("role")?.Value;
+            return loggedInRole == "Admin" || loggedInId == customerId;
+        }
+
+
+     
+        // ==================================================
         // GET api/customer
-        // Get all customers
         // ==================================================
         [HttpGet]
+        [EnableRateLimiting("ReadPolicy")]
+        [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<ApiResponse<IEnumerable<CustomerDto>>>> GetAll()
         {
@@ -30,13 +48,19 @@ namespace Store.API.Controllers
 
         // ==================================================
         // GET api/customer/1
-        // Get a single customer by ID
         // ==================================================
         [HttpGet("{id}")]
+        [EnableRateLimiting("ReadPolicy")]
+        [Authorize(Policy = "AllUsers")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<CustomerDto>>> GetById(int id)
         {
+            //  Check if Admin or same customer
+            if (!IsAdminOrSameCustomer(id))
+                return Unauthorized(ApiResponse<CustomerDto>.Fail("You can only view your own data"));
+
             var customer = await _customerService.GetByIdAsync(id);
             if (customer == null)
                 return NotFound(ApiResponse<CustomerDto>.Fail($"Customer with ID {id} was not found"));
@@ -46,13 +70,15 @@ namespace Store.API.Controllers
 
         // ==================================================
         // GET api/customer/email/alice@example.com
-        // Get customer by email
         // ==================================================
         [HttpGet("email/{email}")]
+        [EnableRateLimiting("ReadPolicy")]
+        [Authorize(Policy = "AdminOnly")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<CustomerDto>>> GetByEmail(string email)
         {
+           ;
             var customer = await _customerService.GetByEmailAsync(email);
             if (customer == null)
                 return NotFound(ApiResponse<CustomerDto>.Fail($"Customer with email {email} was not found"));
@@ -62,13 +88,19 @@ namespace Store.API.Controllers
 
         // ==================================================
         // GET api/customer/1/orders
-        // Get customer with their orders
         // ==================================================
         [HttpGet("{id}/orders")]
+        [EnableRateLimiting("ReadPolicy")]
+        [Authorize(Policy = "AllUsers")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<CustomerDto>>> GetWithOrders(int id)
         {
+            
+            if (!IsAdminOrSameCustomer(id))
+                return Unauthorized(ApiResponse<CustomerDto>.Fail("You can only view your own orders"));
+
             var customer = await _customerService.GetWithOrdersAsync(id);
             if (customer == null)
                 return NotFound(ApiResponse<CustomerDto>.Fail($"Customer with ID {id} was not found"));
@@ -78,14 +110,14 @@ namespace Store.API.Controllers
 
         // ==================================================
         // POST api/customer
-        // Create a new customer
         // ==================================================
+        [AllowAnonymous]
         [HttpPost]
+        [EnableRateLimiting("WritePolicy")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ApiResponse<CustomerDto>>> Create(CustomerCreateDto createDto)
         {
-            // Business validation
             if (await _customerService.EmailExistsAsync(createDto.Email))
                 return BadRequest(ApiResponse<CustomerDto>.Fail("Email already exists"));
 
@@ -100,13 +132,20 @@ namespace Store.API.Controllers
 
         // ==================================================
         // PUT api/customer/1
-        // Update an existing customer
+        // 🔒 Admin OR same customer only
         // ==================================================
         [HttpPut("{id}")]
+        [Authorize(Policy = "AllUsers")]
+        [EnableRateLimiting("WritePolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<CustomerDto>>> Update(int id, CustomerUpdateDto updateDto)
         {
+            // ✅ Check if Admin or same customer
+            if (!IsAdminOrSameCustomer(id))
+                return Unauthorized(ApiResponse<CustomerDto>.Fail("You can only update your own data"));
+
             var customer = await _customerService.UpdateAsync(id, updateDto);
             if (customer == null)
                 return NotFound(ApiResponse<CustomerDto>.Fail($"Customer with ID {id} was not found"));
@@ -116,9 +155,11 @@ namespace Store.API.Controllers
 
         // ==================================================
         // DELETE api/customer/1
-        // Delete a customer
+        // 🔒 Admin only
         // ==================================================
         [HttpDelete("{id}")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<bool>>> Delete(int id)

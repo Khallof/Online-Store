@@ -15,7 +15,7 @@ namespace Store.Core.DTOs.Order
         public string CustomerName { get; set; } = string.Empty;  // flattened from customer
         public DateTime OrderDate { get; set; }
         public decimal TotalAmount { get; set; }
-        public string Status { get; set; } = string.Empty;
+        public short Status { get; set; } = 0;
         public List<OrderItemDto> Items { get; set; } = new();
         public PaymentDto? Payment { get; set; }
         public ShippingDto? Shipping { get; set; }

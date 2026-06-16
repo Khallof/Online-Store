@@ -1,53 +1,39 @@
-﻿using Store.Core.Interfaces.Repositories;
-using Store.Core.Interfaces;
+﻿using Store.Core.Interfaces;
+using Store.Core.Interfaces.Repositories;
 using Store.Repository.Data;
 using Store.Repository.Repositories;
 
 namespace Store.Repository.UnitOfWork
 {
-    // ==================================================
-    // Unit of Work
-    // Wraps ALL repositories into one object
-    // One SaveChangesAsync() commits everything at once
-    // ==================================================
     public class UnitOfWork : IUnitOfWork
     {
         private readonly AppDbContext _context;
 
-        // Lazy initialization — only created when first accessed
-        private ICustomerRepository? _customers;
-        private IProductRepository? _products;
-        private IProductCategoryRepository? _productCategories;
-        private IOrderRepository? _orders;
-        private IPaymentRepository? _payments;
-        private IShippingRepository? _shippings;
-        private IReviewRepository? _reviews;
+        public ICustomerRepository Customers { get; }
+        public IProductRepository Products { get; }
+        public IProductCategoryRepository ProductCategories { get; }
+        public IOrderRepository Orders { get; }
+        public IPaymentRepository Payments { get; }
+        public IShippingRepository Shippings { get; }
+        public IReviewRepository Reviews { get; }
+
+        // ✅ New
+        public IRefreshTokenRepository RefreshTokens { get; }
 
         public UnitOfWork(AppDbContext context)
         {
             _context = context;
+            Customers = new CustomerRepository(_context);
+            Products = new ProductRepository(_context);
+            ProductCategories = new ProductCategoryRepository(_context);
+            Orders = new OrderRepository(_context);
+            Payments = new PaymentRepository(_context);
+            Shippings = new ShippingRepository(_context);
+            Reviews = new ReviewRepository(_context);
+
+            // ✅ New
+            RefreshTokens = new RefreshTokenRepository(_context);
         }
-
-        public ICustomerRepository Customers
-            => _customers ??= new CustomerRepository(_context);
-
-        public IProductRepository Products
-            => _products ??= new ProductRepository(_context);
-
-        public IProductCategoryRepository ProductCategories
-            => _productCategories ??= new ProductCategoryRepository(_context);
-
-        public IOrderRepository Orders
-            => _orders ??= new OrderRepository(_context);
-
-        public IPaymentRepository Payments
-            => _payments ??= new PaymentRepository(_context);
-
-        public IShippingRepository Shippings
-            => _shippings ??= new ShippingRepository(_context);
-
-        public IReviewRepository Reviews
-            => _reviews ??= new ReviewRepository(_context);
 
         public async Task<int> SaveChangesAsync()
         {
