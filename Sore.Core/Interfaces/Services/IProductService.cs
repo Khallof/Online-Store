@@ -24,10 +24,20 @@ namespace Store.Core.Interfaces.Services
         // Add an image to a product
         Task<ProductImageDto> AddImageAsync(int productId, ProductImageCreateDto imageDto);
 
+
+        Task<string?> GetImageUrlAsync(int imageId);
+
+
         // Remove an image from a product
         Task<bool> RemoveImageAsync(int imageId);
 
         // Update stock after an order is placed
         Task UpdateStockAsync(int productId, int quantity);
+
+        
+
+        // Reorder images
+        Task ReorderImagesAsync(int productId, List<ImageReorderDto> reorderDto);
+
     }
 }

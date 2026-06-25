@@ -136,13 +136,18 @@ namespace Store.API.Controllers
         // POST api/order
         // Place a new order
         // ==================================================
-        [AllowAnonymous]
+        [Authorize(Policy = "AllUsers")]
         [HttpPost]
         [EnableRateLimiting("WritePolicy")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<ApiResponse<OrderSummaryDto>>> Create(OrderCreateDto createDto)
         {
+            if (!IsAdminOrSameCustomer(createDto.CustomerID))
+                return Unauthorized(ApiResponse<OrderSummaryDto>.Fail("You can only creat order for your own "));
+
+
             var order = await _orderService.CreateAsync(createDto);
             return CreatedAtAction(nameof(GetById),
                                    new { id = order.OrderID },
@@ -179,7 +184,7 @@ namespace Store.API.Controllers
         public async Task<ActionResult<ApiResponse<bool>>> Cancel(int id)
         {
             if (!IsAdminOrSameCustomer(id))
-                return Unauthorized(ApiResponse<IEnumerable<bool>>.Fail("You can only view your own orders"));
+                return Unauthorized(ApiResponse<IEnumerable<bool>>.Fail("You can only cancel your own orders"));
 
             var result = await _orderService.CancelOrderAsync(id);
             if (!result)

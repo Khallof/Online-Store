@@ -33,5 +33,11 @@ namespace Store.Core.Interfaces.Repositories
         Task<ProductImages> AddImageAsync(ProductImages image);
 
         Task<bool> RemoveImageAsync(int imageId);
+
+        Task<ProductImages?> GetImageByIdAsync(int imageId);
+
+        // Update image order
+        Task UpdateImageOrderAsync(int imageId, short imageOrder);
+
     }
 }

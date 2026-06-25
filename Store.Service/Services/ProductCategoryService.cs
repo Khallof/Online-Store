@@ -52,6 +52,12 @@ namespace Store.Service.Services
 
         public async Task<ProductCategoryDto> CreateAsync(ProductCategoryCreateDto createDto)
         {
+            var exists = await _unitOfWork.ProductCategories
+                                 .CategoryExistsAsync(createDto.CategoryName);
+            if (exists)
+                throw new InvalidOperationException(
+                    $"Category '{createDto.CategoryName}' already exists.");
+
             var category = MapToEntity(createDto);
             await _unitOfWork.ProductCategories.AddAsync(category);
             await _unitOfWork.SaveChangesAsync();
@@ -63,6 +69,15 @@ namespace Store.Service.Services
             var category = await _unitOfWork.ProductCategories.GetByIdAsync(id);
             if (category == null) return null;
 
+            if (category.CategoryName != updateDto.CategoryName)
+            {
+                var exists = await _unitOfWork.ProductCategories
+                                              .CategoryExistsAsync(updateDto.CategoryName);
+                if (exists)
+                    throw new InvalidOperationException(
+                        $"Category '{updateDto.CategoryName}' already exists.");
+            }
+
             category.CategoryName = updateDto.CategoryName;
 
             _unitOfWork.ProductCategories.Update(category);
@@ -72,10 +87,21 @@ namespace Store.Service.Services
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var category = await _unitOfWork.ProductCategories.GetByIdAsync(id);
+            var category = await _unitOfWork.ProductCategories
+                                            .GetWithProductsAsync(id);
             if (category == null) return false;
 
-            _unitOfWork.ProductCategories.Delete(category);
+           
+            if (category.ProductCatalog != null && category.ProductCatalog.Any())
+                throw new InvalidOperationException(
+                    $"Cannot delete category '{category.CategoryName}' " +
+
+                    $"because it has {category.ProductCatalog.Count()} products. " +
+
+                    $"Please move or delete the products first.");
+
+            _unitOfWork.ProductCategories.Delete(
+            await _unitOfWork.ProductCategories.GetByIdAsync(id) ?? new ProductCategory());
             await _unitOfWork.SaveChangesAsync();
             return true;
         }

@@ -97,11 +97,32 @@ namespace Store.Service.Services
             // 1 - Calculate total amount from product prices
             decimal totalAmount = 0;
             var orderItems = new List<OrderItem>();
+            var validationErrors = new List<string>();
+
 
             foreach (var item in createDto.Items)
             {
                 var product = await _unitOfWork.Products.GetByIdAsync(item.ProductID);
-                if (product == null) continue;
+                if (product == null)
+                {
+                    validationErrors.Add($"Product with ID {item.ProductID} does not exist.");
+                    continue;
+                }
+
+                if (product.QuantityInStock < item.Quantity)
+                {
+                    validationErrors.Add(
+                        $"'{product.ProductName}' only has {product.QuantityInStock} " +
+                        $"items in stock but you requested {item.Quantity}.");
+                    continue;
+                }
+
+                if (product.QuantityInStock - item.Quantity < 0)
+                {
+                    validationErrors.Add($"'{product.ProductName}' stock cannot go below 0.");
+                    continue;
+                }
+
 
                 var orderItem = new OrderItem
                 {
@@ -117,6 +138,8 @@ namespace Store.Service.Services
                 // 2 - Update stock
                 await _unitOfWork.Products.UpdateStockAsync(item.ProductID, item.Quantity);
             }
+            if (validationErrors.Any())
+                throw new InvalidOperationException(string.Join(" | ", validationErrors));
 
             // 3 - Create order
             var order = new Order
@@ -137,6 +160,17 @@ namespace Store.Service.Services
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(id);
             if (order == null) return null;
+
+            var currentStatus = order.Status;
+            var newStatus = updateDto.Status;
+
+            if (newStatus != 4 && newStatus < currentStatus)
+                throw new InvalidOperationException(
+                    $"Cannot change order status from '{GetStatusLabel(currentStatus)}' " +
+                    $"back to '{GetStatusLabel(newStatus)}'. Status can only move forward.");
+
+
+
 
             order.Status = updateDto.Status;
 
@@ -195,7 +229,28 @@ namespace Store.Service.Services
 
         public async Task<bool> CancelOrderAsync(int orderId)
         {
+            var order = await _unitOfWork.Orders.GetByIdAsync(orderId);
+            if (order == null) return false;
+
+            if (order.Status == 3)
+                throw new InvalidOperationException(
+                    "Cannot cancel an order that has already been delivered.");
+
+            if (order.Status == 4)
+                throw new InvalidOperationException(
+                    "This order is already cancelled.");
+
             return await UpdateStatusAsync(orderId, 4); // 4 = Cancelled
         }
+
+        private static string GetStatusLabel(short status) => status switch
+        {
+            0 => "Pending",
+            1 => "Processing",
+            2 => "Shipped",
+            3 => "Delivered",
+            4 => "Cancelled",
+            _ => "Unknown"
+        };
     }
 }

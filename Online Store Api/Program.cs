@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Store.API.Middleware;
+using Store.API.Services;
 using Store.Core.Interfaces;
 using Store.Core.Interfaces.Repositories;
 using Store.Core.Interfaces.Services;
@@ -52,6 +53,7 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IShippingService, ShippingService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<IImageUploadService, ImageUploadService>();
 
 // ==================================================
 // 5 — Register Auth Services
@@ -288,7 +290,7 @@ if (app.Environment.IsDevelopment())
 
 //  Global error handling — must be first
 app.UseGlobalErrorHandling();
-
+app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseCors("OnlineStorePolicy");
 app.UseRateLimiter();

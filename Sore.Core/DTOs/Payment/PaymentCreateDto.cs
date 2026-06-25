@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Store.Core.DTOs.Customer;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -21,5 +22,7 @@ namespace Store.Core.DTOs.Payment
         [RegularExpression("^(CreditCard|DebitCard|PayPal|BankTransfer|Cash|Other)$",
             ErrorMessage = "Invalid payment method")]
         public string PaymentMethod { get; set; } = string.Empty;
+
+        public CustomerDto? Customer { get; set; }
     }
 }

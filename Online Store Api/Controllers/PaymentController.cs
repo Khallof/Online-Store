@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Store.API.Helpers;
 using Store.Core.DTOs.Order;
 using Store.Core.DTOs.Payment;
+using Store.Core.Entities;
 using Store.Core.Interfaces.Services;
 
 namespace Store.API.Controllers
@@ -115,12 +116,15 @@ namespace Store.API.Controllers
         // Create a payment for an order
         // ==================================================
         [HttpPost]
-        [AllowAnonymous]
+        [Authorize(Policy = "AllUsers")]
         [EnableRateLimiting("WritePolicy")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ApiResponse<PaymentDto>>> Create(PaymentCreateDto createDto)
         {
+            if (!IsAdminOrSameCustomer(createDto.Customer.CustomerID))
+                return Unauthorized(ApiResponse<PaymentDto>.Fail("You can only Creat Payment For your own Orders"));
+
             // Check if order already has a payment
             if (await _paymentService.OrderHasPaymentAsync(createDto.OrderID))
                 return BadRequest(ApiResponse<PaymentDto>.Fail($"Order {createDto.OrderID} already has a payment"));

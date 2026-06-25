@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "5oblaJQ17Ig=",
+  "dgSpecHash": "aqnixqM4uw8=",
   "success": true,
   "projectFilePath": "C:\\Users\\Khall\\Documents\\My_GitHub\\ONLINE_STORE\\Store.Repository\\Store.Repository.csproj",
   "expectedPackageFiles": [
@@ -85,17 +85,10 @@
     "C:\\Users\\Khall\\.nuget\\packages\\system.text.json\\8.0.0\\system.text.json.8.0.0.nupkg.sha512",
     "C:\\Users\\Khall\\.nuget\\packages\\system.threading.channels\\6.0.0\\system.threading.channels.6.0.0.nupkg.sha512",
     "C:\\Users\\Khall\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512",
-    "C:\\Users\\Khall\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512"
+    "C:\\Users\\Khall\\.nuget\\packages\\system.windows.extensions\\6.0.0\\system.windows.extensions.6.0.0.nupkg.sha512",
+    "C:\\Users\\Khall\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.28\\microsoft.windowsdesktop.app.ref.8.0.28.nupkg.sha512",
+    "C:\\Users\\Khall\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.28\\microsoft.netcore.app.ref.8.0.28.nupkg.sha512",
+    "C:\\Users\\Khall\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.28\\microsoft.aspnetcore.app.ref.8.0.28.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1900",
-      "level": "Warning",
-      "message": "Error occurred while getting package vulnerability data: Unable to load the service index for source https://api.nuget.org/v3/index.json.",
-      "projectPath": "C:\\Users\\Khall\\Documents\\My_GitHub\\ONLINE_STORE\\Store.Repository\\Store.Repository.csproj",
-      "warningLevel": 1,
-      "filePath": "C:\\Users\\Khall\\Documents\\My_GitHub\\ONLINE_STORE\\Store.Repository\\Store.Repository.csproj",
-      "targetGraphs": []
-    }
-  ]
+  "logs": []
 }

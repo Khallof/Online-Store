@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Store.Core.DTOs.Customer;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,5 +16,7 @@ namespace Store.Core.DTOs.Shipping
         public string Status { get; set; } = string.Empty;        // readable label e.g. "InTransit"
         public DateTime? EstimatedDeliveryDate { get; set; }
         public DateTime? ActualDeliveryDate { get; set; }
+
+       
     }
 }

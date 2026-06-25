@@ -5,6 +5,7 @@ using Store.API.Helpers;
 using Store.Core.DTOs.Payment;
 using Store.Core.DTOs.Shipping;
 using Store.Core.Interfaces.Services;
+using System.ComponentModel.Design.Serialization;
 
 namespace Store.API.Controllers
 {
@@ -13,6 +14,7 @@ namespace Store.API.Controllers
     [Route("api/[controller]")]
     public class ShippingController : ControllerBase
     {
+       
         private readonly IShippingService _shippingService;
 
         public ShippingController(IShippingService shippingService)
@@ -50,8 +52,10 @@ namespace Store.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ShippingDto>>> GetById(int id)
         {
-            if (!IsAdminOrSameCustomer(id))
-                return Unauthorized(ApiResponse<ShippingDto>.Fail("You can only view your own data"));
+          
+
+           
+
             var shipping = await _shippingService.GetByIdAsync(id);
             if (shipping == null)
                 return NotFound(ApiResponse<ShippingDto>.Fail($"Shipping with ID {id} was not found"));
@@ -70,8 +74,7 @@ namespace Store.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<ShippingDto>>> GetByOrder(int orderId)
         {
-            if (!IsAdminOrSameCustomer(orderId))
-                return Unauthorized(ApiResponse<ShippingDto>.Fail("You can only view your own data"));
+            
             var shipping = await _shippingService.GetByOrderAsync(orderId);
             if (shipping == null)
                 return NotFound(ApiResponse<ShippingDto>.Fail($"No shipping found for order {orderId}"));
@@ -84,7 +87,7 @@ namespace Store.API.Controllers
         // Get shipping by tracking number
         // ==================================================
         [HttpGet("track/{trackingNumber}")]
-        [Authorize(Policy ="AllUsers")]
+        [Authorize(Policy ="AdminOnly")]
         [EnableRateLimiting("ReadPolicy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -116,7 +119,7 @@ namespace Store.API.Controllers
         // Create a shipping record for an order
         // ==================================================
         [HttpPost]
-        [AllowAnonymous]
+        [Authorize(Policy = "AdminOnly")]
         [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

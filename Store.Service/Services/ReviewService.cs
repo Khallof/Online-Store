@@ -67,6 +67,21 @@ namespace Store.Service.Services
             if (alreadyReviewed)
                 throw new InvalidOperationException("You have already reviewed this product.");
 
+
+            var customerOrders = await _unitOfWork.Orders
+                                               .GetByCustomerAsync(createDto.CustomerID);
+
+            var hasOrderedAndReceived = customerOrders
+                .Any(o =>
+                    o.Status == 3 &&  // 3 = Delivered
+                    o.OrderItem != null &&
+                    o.OrderItem.Any(oi => oi.ProductID == createDto.ProductID));
+
+            if (!hasOrderedAndReceived)
+                throw new InvalidOperationException(
+                    "You can only review products you have purchased and received.");
+
+
             var review = MapToEntity(createDto);
             await _unitOfWork.Reviews.AddAsync(review);
             await _unitOfWork.SaveChangesAsync();

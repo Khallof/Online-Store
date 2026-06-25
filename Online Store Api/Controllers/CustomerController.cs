@@ -132,7 +132,6 @@ namespace Store.API.Controllers
 
         // ==================================================
         // PUT api/customer/1
-        // 🔒 Admin OR same customer only
         // ==================================================
         [HttpPut("{id}")]
         [Authorize(Policy = "AllUsers")]
@@ -142,7 +141,7 @@ namespace Store.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ApiResponse<CustomerDto>>> Update(int id, CustomerUpdateDto updateDto)
         {
-            // ✅ Check if Admin or same customer
+            //  Check if Admin or same customer
             if (!IsAdminOrSameCustomer(id))
                 return Unauthorized(ApiResponse<CustomerDto>.Fail("You can only update your own data"));
 
@@ -155,7 +154,6 @@ namespace Store.API.Controllers
 
         // ==================================================
         // DELETE api/customer/1
-        // 🔒 Admin only
         // ==================================================
         [HttpDelete("{id}")]
         [Authorize(Policy = "AdminOnly")]

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Store.API.Helpers;
+using Store.API.Services;
 using Store.Core.DTOs.Product;
 using Store.Core.Helpers;
 using Store.Core.Interfaces.Services;
@@ -13,10 +14,12 @@ namespace Store.API.Controllers
     public class ProductController : ControllerBase
     {
         private readonly IProductService _productService;
+        private readonly IImageUploadService _imageUploadService;
 
-        public ProductController(IProductService productService)
+        public ProductController(IProductService productService,IImageUploadService imageUploadService)
         {
             _productService = productService;
+            _imageUploadService = imageUploadService;
         }
 
         // ==================================================
@@ -174,22 +177,77 @@ namespace Store.API.Controllers
         // POST api/product/1/images
         // ==================================================
         [HttpPost("{id}/images")]
+        [Consumes("multipart/form-data")]
         [Authorize(Policy = "AdminOnly")]
         [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ApiResponse<ProductImageDto>>> AddImage(
-            int id,
-            ProductImageCreateDto imageDto)
+
+       public async Task<ActionResult<ApiResponse<ProductImageDto>>> AddImage(int id,IFormFile file,  [FromForm] int imageOrder = 0)
         {
             var product = await _productService.GetByIdAsync(id);
             if (product == null)
-                return NotFound(ApiResponse<ProductImageDto>.Fail($"Product with ID {id} was not found"));
+                return NotFound(ApiResponse<ProductImageDto>.NotFound(
+                    $"Product with ID {id} was not found"));
 
-            var image = await _productService.AddImageAsync(id, imageDto);
+            if (file == null || file.Length == 0)
+                return BadRequest(ApiResponse<ProductImageDto>.Fail(
+                    "No image file provided",
+                    new List<string> { "Please select an image file" }));
+
+            if (!_imageUploadService.IsValidImage(file))
+                return BadRequest(ApiResponse<ProductImageDto>.Fail(
+                    "Invalid image file",
+                    new List<string> { _imageUploadService.GetValidationError(file) }));
+
+            var imageUrl = await _imageUploadService.UploadImageAsync(file, "products");
+
+            var imageDto = new ProductImageCreateDto
+            {
+                ImageURL = imageUrl,
+                ImageOrder = (short)imageOrder
+            };
+
+            var savedImage = await _productService.AddImageAsync(id, imageDto);
             return CreatedAtAction(nameof(GetDetail),
-                                   new { id },
-                                   ApiResponse<ProductImageDto>.Ok(image, "Image added successfully"));
+                new { id },
+                ApiResponse<ProductImageDto>.Ok(savedImage, "Image uploaded successfully", 201));
+        }
+
+        // ==================================================
+        // PUT api/product/images/reordaring
+        // ==================================================
+
+        [HttpPut("{id}/images/reorder")]
+        [Authorize(Policy = "AdminOnly")]
+        [DisableRateLimiting]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<ApiResponse<bool>>> ReorderImages(
+            int id,
+            List<ImageReorderDto> reorderDto)
+        {
+            var product = await _productService.GetByIdAsync(id);
+            if (product == null)
+                return NotFound(ApiResponse<bool>.NotFound(
+                    $"Product with ID {id} was not found"));
+
+            if (reorderDto == null || !reorderDto.Any())
+                return BadRequest(ApiResponse<bool>.Fail(
+                    "No images provided",
+                    new List<string> { "Please provide at least one image to reorder" }));
+
+            try
+            {
+                await _productService.ReorderImagesAsync(id, reorderDto);
+                return Ok(ApiResponse<bool>.Ok(true, "Images reordered successfully"));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ApiResponse<bool>.Fail(
+                    "Reorder failed",
+                    new List<string> { ex.Message }));
+            }
         }
 
         // ==================================================
@@ -236,13 +294,23 @@ namespace Store.API.Controllers
         [DisableRateLimiting]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+
+       
         public async Task<ActionResult<ApiResponse<bool>>> RemoveImage(int imageId)
         {
+            // Get URL before deleting from DB
+            var imageUrl = await _productService.GetImageUrlAsync(imageId);
+
             var result = await _productService.RemoveImageAsync(imageId);
             if (!result)
-                return NotFound(ApiResponse<bool>.Fail($"Image with ID {imageId} was not found"));
+                return NotFound(ApiResponse<bool>.NotFound(
+                    $"Image with ID {imageId} was not found"));
 
-            return Ok(ApiResponse<bool>.Ok(true, "Image removed successfully"));
+            // Also delete file from server
+            if (!string.IsNullOrEmpty(imageUrl))
+                await _imageUploadService.DeleteImageAsync(imageUrl);
+
+            return Ok(ApiResponse<bool>.Ok(true, "Image deleted successfully"));
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Store.Core.DTOs.Customer;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -16,5 +17,7 @@ namespace Store.Core.DTOs.Review
         [Required(ErrorMessage = "Rating is required")]
         [Range(1.0, 5.0, ErrorMessage = "Rating must be between 1.0 and 5.0")]
         public decimal Rating { get; set; }
+
+        public CustomerDto? customer { get; set; }
     }
 }

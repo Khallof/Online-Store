@@ -110,12 +110,14 @@ namespace Store.API.Controllers
         // Submit a review
         // ==================================================
         [HttpPost]
-        [AllowAnonymous]
+        [Authorize(Policy = "AllUsers")]
         [EnableRateLimiting("WritePolicy")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ApiResponse<ReviewDto>>> Create(ReviewCreateDto createDto)
         {
+            if (!IsAdminOrSameCustomer(createDto.CustomerID))
+                return Unauthorized(ApiResponse<ReviewDto>.Fail("You can only creat your own Review"));
             // Check if customer already reviewed this product
             if (await _reviewService.ReviewExistsAsync(createDto.ProductID, createDto.CustomerID))
                 return BadRequest(ApiResponse<ReviewDto>.Fail("You have already reviewed this product"));
@@ -142,6 +144,9 @@ namespace Store.API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ApiResponse<ReviewDto>>> Update(int id, ReviewUpdateDto updateDto)
         {
+            if (!IsAdminOrSameCustomer(updateDto.customer.CustomerID))
+                return Unauthorized(ApiResponse<ReviewDto>.Fail("You can only view your own data"));
+
             // Validate rating range
             if (updateDto.Rating < 1.0m || updateDto.Rating > 5.0m)
                 return BadRequest(ApiResponse<ReviewDto>.Fail("Rating must be between 1.0 and 5.0"));

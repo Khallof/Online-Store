@@ -29,4 +29,8 @@
 		<ProjectReference Include="..\Store.Service\Store.Service.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="wwwroot\images\products\" />
+	</ItemGroup>
+
 </Project>

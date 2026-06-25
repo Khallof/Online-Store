@@ -85,5 +85,23 @@ namespace Store.Repository.Repositories
             _context.ProductImages.Remove(image);
             return true;
         }
+
+
+        public async Task<ProductImages?> GetImageByIdAsync(int imageId)
+        {
+            return await _context.ProductImages
+                                 .FindAsync(imageId);
+        }
+
+        public async Task UpdateImageOrderAsync(int imageId, short imageOrder)
+        {
+            var image = await _context.ProductImages.FindAsync(imageId);
+            if (image != null)
+            {
+                image.ImageOrder = imageOrder;
+                _context.ProductImages.Update(image);
+            }
+        }
+
     }
 }

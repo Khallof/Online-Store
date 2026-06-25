@@ -27,7 +27,8 @@ namespace Store.Service.Services
                 Email = customer.Email,
                 Phone = customer.Phone,
                 Address = customer.Address,
-                Username = customer.Username
+                Username = customer.Username,
+                Role= customer.Role,
                
             };
         }
@@ -64,6 +65,10 @@ namespace Store.Service.Services
         public async Task<CustomerDto> CreateAsync(CustomerCreateDto createDto)
         {
             var customer = MapToEntity(createDto);
+            customer.Password = BCrypt.Net.BCrypt.HashPassword(createDto.Password);
+
+
+           
             await _unitOfWork.Customers.AddAsync(customer);
             await _unitOfWork.SaveChangesAsync();
             return MapToDto(customer);
@@ -74,7 +79,28 @@ namespace Store.Service.Services
             var customer = await _unitOfWork.Customers.GetByIdAsync(id);
             if (customer == null) return null;
 
-            // Update only the fields that are allowed to change
+
+            if (customer.Email != updateDto.Email)
+            {
+                var emailExists = await _unitOfWork.Customers
+                                                   .EmailExistsAsync(updateDto.Email);
+                if (emailExists)
+                    throw new InvalidOperationException(
+                        $"Email '{updateDto.Email}' is already taken.");
+            }
+
+
+
+            if (customer.Username != updateDto.Username)
+            {
+                var usernameExists = await _unitOfWork.Customers
+                                                      .UsernameExistsAsync(updateDto.Username);
+                if (usernameExists)
+                    throw new InvalidOperationException(
+                        $"Username '{updateDto.Username}' is already taken.");
+            }
+
+          
             customer.Name = updateDto.Name;
             customer.Email = updateDto.Email;
             customer.Phone = updateDto.Phone;

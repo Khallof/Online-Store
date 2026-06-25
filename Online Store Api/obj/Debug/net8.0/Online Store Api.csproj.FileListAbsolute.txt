@@ -147,3 +147,4 @@ C:\Users\Khall\Documents\My_GitHub\ONLINE_STORE\Online Store Api\obj\Debug\net8.
 C:\Users\Khall\Documents\My_GitHub\ONLINE_STORE\Online Store Api\obj\Debug\net8.0\Online Store Api.pdb
 C:\Users\Khall\Documents\My_GitHub\ONLINE_STORE\Online Store Api\obj\Debug\net8.0\Online Store Api.genruntimeconfig.cache
 C:\Users\Khall\Documents\My_GitHub\ONLINE_STORE\Online Store Api\obj\Debug\net8.0\ref\Online Store Api.dll
+C:\Users\Khall\Documents\My_GitHub\ONLINE_STORE\Online Store Api\bin\Debug\net8.0\Online Store Api.staticwebassets.runtime.json

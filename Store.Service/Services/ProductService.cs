@@ -50,7 +50,7 @@ namespace Store.Service.Services
                 {
                     ImageID = i.ImageID,
                     ImageURL = i.ImageURL,
-                    ImageOrder = i.ImageOrder  // ✅ no cast needed now — both short
+                    ImageOrder = i.ImageOrder  
                 }).ToList()
             };
         }
@@ -90,6 +90,12 @@ namespace Store.Service.Services
 
         public async Task<ProductSummaryDto> CreateAsync(ProductCreateDto createDto)
         {
+            
+            var category = await _unitOfWork.ProductCategories.GetByIdAsync(createDto.CategoryID);
+            if (category == null)
+                throw new InvalidOperationException(
+                    $"Category with ID {createDto.CategoryID} does not exist.");
+
             var product = MapToEntity(createDto);
             await _unitOfWork.Products.AddAsync(product);
             await _unitOfWork.SaveChangesAsync();
@@ -100,6 +106,12 @@ namespace Store.Service.Services
         {
             var product = await _unitOfWork.Products.GetByIdAsync(id);
             if (product == null) return null;
+
+          
+            var category = await _unitOfWork.ProductCategories.GetByIdAsync(updateDto.CategoryID);
+            if (category == null)
+                throw new InvalidOperationException(
+                    $"Category with ID {updateDto.CategoryID} does not exist.");
 
             product.ProductName = updateDto.ProductName;
             product.Description = updateDto.Description;
@@ -152,11 +164,18 @@ namespace Store.Service.Services
 
         public async Task<ProductImageDto> AddImageAsync(int productId, ProductImageCreateDto imageDto)
         {
+            var product = await _unitOfWork.Products.GetWithDetailsAsync(productId);
+
+            
+            var nextOrder = product?.ProductImages.Any() == true
+                ? product.ProductImages.Max(i => i.ImageOrder) + 1
+                : 0;
+
             var image = new ProductImages
             {
                 ProductID = productId,
                 ImageURL = imageDto.ImageURL,
-                ImageOrder = imageDto.ImageOrder
+                ImageOrder = (short)nextOrder  
             };
 
             await _unitOfWork.Products.AddImageAsync(image);
@@ -184,5 +203,35 @@ namespace Store.Service.Services
             await _unitOfWork.Products.UpdateStockAsync(productId, quantity);
             await _unitOfWork.SaveChangesAsync();
         }
+
+
+
+        public async Task<string?> GetImageUrlAsync(int imageId)
+        {
+            var image = await _unitOfWork.Products.GetImageByIdAsync(imageId);
+            return image?.ImageURL;
+        }
+
+        public async Task ReorderImagesAsync(int productId, List<ImageReorderDto> reorderDto)
+        {
+            // Validate all images belong to this product
+            var product = await _unitOfWork.Products.GetWithDetailsAsync(productId);
+            if (product == null)
+                throw new InvalidOperationException($"Product with ID {productId} not found.");
+
+            var productImageIds = product.ProductImages.Select(i => i.ImageID).ToHashSet();
+
+            foreach (var item in reorderDto)
+            {
+                if (!productImageIds.Contains(item.ImageID))
+                    throw new InvalidOperationException(
+                        $"Image {item.ImageID} does not belong to product {productId}.");
+
+                await _unitOfWork.Products.UpdateImageOrderAsync(item.ImageID, item.ImageOrder);
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+        }
+
     }
 }

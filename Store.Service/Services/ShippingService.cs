@@ -63,8 +63,25 @@ namespace Store.Service.Services
         {
             // Check if order already has a shipping record
             var alreadyExists = await _unitOfWork.Shippings.OrderHasShippingAsync(createDto.OrderID);
+
+
             if (alreadyExists)
                 throw new InvalidOperationException($"Order {createDto.OrderID} already has a shipping record.");
+
+            var order = await _unitOfWork.Orders.GetByIdAsync(createDto.OrderID);
+
+            if (order == null)
+                throw new InvalidOperationException(
+                    $"Order with ID {createDto.OrderID} does not exist.");
+
+            if (order.Status==4) 
+                throw new InvalidOperationException($"Order {createDto.OrderID} is already cancelled.");
+
+            if (createDto.EstimatedDeliveryDate.HasValue &&
+              createDto.EstimatedDeliveryDate.Value <= order.Orderdate)
+                throw new InvalidOperationException(
+                    "Estimated delivery date must be after the order date " +
+                    $"({order.Orderdate:yyyy-MM-dd}).");
 
             var shipping = MapToEntity(createDto);
             await _unitOfWork.Shippings.AddAsync(shipping);
@@ -76,6 +93,15 @@ namespace Store.Service.Services
         {
             var shipping = await _unitOfWork.Shippings.GetByIdAsync(id);
             if (shipping == null) return null;
+
+            var order = await _unitOfWork.Orders.GetByIdAsync(shipping.OrderID);
+
+            if (updateDto.ActualDeliveryDate.HasValue && order != null &&
+              updateDto.ActualDeliveryDate.Value < order.Orderdate)
+                throw new InvalidOperationException(
+                    $"Actual delivery date ({updateDto.ActualDeliveryDate.Value:yyyy-MM-dd}) " +
+                    $"cannot be before the order date ({order.Orderdate:yyyy-MM-dd}).");
+
 
             shipping.TrackingNumber = updateDto.TrackingNumber;
             shipping.ShippingStatus = updateDto.ShippingStatus;
@@ -131,5 +157,8 @@ namespace Store.Service.Services
         {
             return await _unitOfWork.Shippings.OrderHasShippingAsync(orderId);
         }
+
+       
+
     }
 }

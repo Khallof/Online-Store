@@ -36,12 +36,11 @@ namespace Store.Service.Services
                 OrderID = dto.OrderID,
                 Amount = dto.Amount,
                 PaymentMethod = dto.PaymentMethod
-                // TransactionDate set by DB default
             };
         }
 
         // ==================================================
-        // IGenericService Implementation
+        // GetAllAsync
         // ==================================================
         public async Task<IEnumerable<PaymentDto>> GetAllAsync()
         {
@@ -49,6 +48,9 @@ namespace Store.Service.Services
             return payments.Select(p => MapToDto(p));
         }
 
+        // ==================================================
+        // GetByIdAsync
+        // ==================================================
         public async Task<PaymentDto?> GetByIdAsync(int id)
         {
             var payment = await _unitOfWork.Payments.GetByIdAsync(id);
@@ -56,12 +58,38 @@ namespace Store.Service.Services
             return MapToDto(payment);
         }
 
+        // ==================================================
+        // CreateAsync
+        //     Business Validations:
+        // 1 — Can't pay for already paid order
+        // 2 — Can't pay for a cancelled order
+        // 3 — Payment amount must match order total
+        // ==================================================
         public async Task<PaymentDto> CreateAsync(PaymentCreateDto createDto)
         {
-            // Check if order already has a payment
-            var alreadyPaid = await _unitOfWork.Payments.OrderHasPaymentAsync(createDto.OrderID);
+            //  Validation 1 — Already paid?
+            var alreadyPaid = await _unitOfWork.Payments
+                                               .OrderHasPaymentAsync(createDto.OrderID);
             if (alreadyPaid)
-                throw new InvalidOperationException($"Order {createDto.OrderID} already has a payment.");
+                throw new InvalidOperationException(
+                    $"Order {createDto.OrderID} already has a payment.");
+
+            //  Validation 2 — Can't pay for cancelled order
+            var order = await _unitOfWork.Orders.GetByIdAsync(createDto.OrderID);
+            if (order == null)
+                throw new InvalidOperationException(
+                    $"Order {createDto.OrderID} does not exist.");
+
+            if (order.Status == 4)
+                throw new InvalidOperationException(
+                    "Cannot pay for a cancelled order.");
+
+            //  Validation 3 — Payment amount must match order total
+            if (createDto.Amount != order.TotalAmount)
+                throw new InvalidOperationException(
+                    $"Payment amount ({createDto.Amount:C}) does not match " +
+                    $"order total ({order.TotalAmount:C}). " +
+                    $"Please pay the exact amount.");
 
             var payment = MapToEntity(createDto);
             await _unitOfWork.Payments.AddAsync(payment);
@@ -69,6 +97,9 @@ namespace Store.Service.Services
             return MapToDto(payment);
         }
 
+        // ==================================================
+        // UpdateAsync
+        // ==================================================
         public async Task<PaymentDto?> UpdateAsync(int id, PaymentCreateDto updateDto)
         {
             var payment = await _unitOfWork.Payments.GetByIdAsync(id);
@@ -82,6 +113,9 @@ namespace Store.Service.Services
             return MapToDto(payment);
         }
 
+        // ==================================================
+        // DeleteAsync
+        // ==================================================
         public async Task<bool> DeleteAsync(int id)
         {
             var payment = await _unitOfWork.Payments.GetByIdAsync(id);
@@ -93,7 +127,7 @@ namespace Store.Service.Services
         }
 
         // ==================================================
-        // IPaymentService Specific Methods
+        // GetByOrderAsync
         // ==================================================
         public async Task<PaymentDto?> GetByOrderAsync(int orderId)
         {
@@ -102,18 +136,29 @@ namespace Store.Service.Services
             return MapToDto(payment);
         }
 
+        // ==================================================
+        // GetByMethodAsync
+        // ==================================================
         public async Task<IEnumerable<PaymentDto>> GetByMethodAsync(string paymentMethod)
         {
             var payments = await _unitOfWork.Payments.GetByMethodAsync(paymentMethod);
             return payments.Select(p => MapToDto(p));
         }
 
-        public async Task<IEnumerable<PaymentDto>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
+        // ==================================================
+        // GetByDateRangeAsync
+        // ==================================================
+        public async Task<IEnumerable<PaymentDto>> GetByDateRangeAsync(
+            DateTime startDate, DateTime endDate)
         {
-            var payments = await _unitOfWork.Payments.GetByDateRangeAsync(startDate, endDate);
+            var payments = await _unitOfWork.Payments
+                                            .GetByDateRangeAsync(startDate, endDate);
             return payments.Select(p => MapToDto(p));
         }
 
+        // ==================================================
+        // OrderHasPaymentAsync
+        // ==================================================
         public async Task<bool> OrderHasPaymentAsync(int orderId)
         {
             return await _unitOfWork.Payments.OrderHasPaymentAsync(orderId);

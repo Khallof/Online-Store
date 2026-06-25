@@ -23,5 +23,7 @@ namespace Store.Core.Interfaces.Services
 
         // Check if an order already has a shipping record
         Task<bool> OrderHasShippingAsync(int orderId);
+
+       
     }
 }
